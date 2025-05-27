@@ -1,0 +1,9 @@
+# Ignore Everything
+/*
+
+# Except
+!.gitignore
+!init.el
+!early-init.el
+!pratik-emacs.org
+!pratik-module/

@@ -1,0 +1,820 @@
+#+title: Pratik's Emacs configuration
+#+author: Pratik Abhyankar
+
+* Introduction
+
+While majority of the configuration here comes from  my old 'illiterate' Emacs configuration, many parts of it, including the structure, is adapted from Vedang Manerikar's Emacs configuration for Unravel Team.
+
+To make a change to this Emacs configuration, edit this file and then type =C-c C-v C-t= (=M-x org-babel-tangle=) to republish all the relevant files.
+
+#+begin_src emacs-lisp :tangle no :results none
+  (org-babel-tangle)
+#+end_src
+
+
+* The =early-init.el= file
+
+This is the first file that Emacs reads when starting up. It should contain code that does not depend on any package or the proportions of the Emacs frame. In general, this early initialization file is meant to set up a few basic things before Emacs produces the initial frame by delegating to the =init.el=.
+
+** The =early-init.el= file basic frame settings
+
+#+begin_src emacs-lisp :tangle "early-init.el"
+    ;; early-init.el -*- lexical-binding: t; -*-
+
+  (setq frame-resize-pixelwise t
+        frame-inhibit-implied-resize t
+        frame-title-format '("%b")
+        debug-on-error t
+        ring-bell-function 'ignore
+        use-file-dialog nil
+        use-short-answers t
+        inhibit-startup-screen t
+        inhibit-x-resources t
+        inhibit-startup-echo-area-message user-login-name
+        inhibit-startup-buffer-menu t)
+
+  (push '(fullscreen . maximized) default-frame-alist)
+
+  (menu-bar-mode -1)
+  (scroll-bar-mode -1)
+  (tool-bar-mode -1)
+#+end_src
+
+** The =early-init.el= file tweaks to startup time and garbage collection
+
+Temporarily increase the garbage collection threshold to speed up Emacs startup time. Once started, reset the threshold to 50 MB.
+
+#+begin_src emacs-lisp :tangle "early-init.el"
+  (let ((gc-cons-threshold most-positive-fixnum)
+        (gc-cons-percentage 0.6))
+
+    (add-hook 'emacs-startup-hook
+              (lambda ()
+                (setq gc-cons-threshold (* 50 1000 1000))
+                (setq gc-cons-percentage 0.1))))
+#+end_src
+
+** The =early-init.el= initializes package cache settings
+
+Do not initialize the package cache. This configuration uses =elpaca= instead of =package.el=.
+
+#+begin_src emacs-lisp :tangle "early-init.el"
+  (setq package-enable-at-startup nil)
+#+end_src
+
+** =The early-init.el= file setting to load latest of =.el= or =.elc= files
+
+When both =.el= and =.elc= files are available, load the latest one.
+
+#+begin_src emacs-lisp :tangle "early-init.el"
+  (setq load-prefer-newer t)
+#+end_src
+
+** Finally, the =early-init.el= local variable settings
+
+This should be the last section of the ~early-init.el~ file.
+
+#+begin_src emacs-lisp :tangle "early-init.el"
+  ;; Local Variables:
+  ;; no-byte-compile: t
+  ;; no-native-compile: t
+  ;; no-update-autoloads: t
+  ;; End:
+#+end_src
+
+
+* The =init.el= file
+
+The main initialization file of Emacs. Everything loads from here, even if it has been split into multiple files for convenience.
+
+** The =init.el= setting to disable backups and lockfiles
+
+#+begin_src emacs-lisp :tangle "init.el"
+  ;; init.el -*- lexical-binding: t; -*-
+
+  (setq auto-save-default nil)
+  (setq auto-save-list-file-prefix nil)
+  (setq make-backup-files nil)
+  (setq backup-inhibited nil) ; Not sure if needed, given `make-backup-files'
+  (setq create-lockfiles nil)
+#+end_src
+
+** The =init.el= tweaks to make native compilation silent
+
+Disable native compilation warnings. They are annoying and intrusive.
+
+#+begin_src emacs-lisp :tangle "init.el"
+    ;; Make native compilation silent and prune its cache.
+  (when (native-comp-available-p)
+    (setq native-comp-async-report-warnings-errors 'silent) ; Emacs 28 with native compilation
+    (setq native-compile-prune-cache t)) ; Emacs 29
+#+end_src
+
+** The =init.el= setting to send ~custom-file~ to oblivion
+
+There is no need to use the =M-x customize= infrastructure. It's easier to just rely on the init file instead.
+
+#+begin_src emacs-lisp :tangle "init.el"
+  ;; Disable custom.el by making it disposable.
+  (setq custom-file (make-temp-file "emacs-custom-file"))
+#+end_src
+
+** The =init.el= settings to enable commands disabled by default
+
+These commands are actually useful, especially in org-mode.
+
+#+begin_src emacs-lisp :tangle "init.el"
+  ;; Enable these commands which have been disabled by default
+  (mapc
+   (lambda (command)
+     (put command 'disabled nil))
+   '(list-timers narrow-to-region narrow-to-page upcase-region downcase-region))
+#+end_src
+
+** The =init.el= settings to disable unnecessary commands enabled by default
+
+These commands are "unsafe", in that we should be using the alternatives (like ~vterm~ and ~org~)
+
+#+begin_src emacs-lisp :tangle "init.el"
+  ;; Disable these commands which have been enabled by default
+  (mapc
+   (lambda (command)
+     (put command 'disabled t))
+   '(eshell project-eshell overwrite-mode iconify-frame diary))
+#+end_src
+
+** The =init.el= section for using Elapaca package manager (~elpaca~)
+
+#+begin_src emacs-lisp :tangle "init.el"
+  (defvar elpaca-installer-version 0.11)
+  (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
+  (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
+  (defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
+  (defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
+                                :ref nil :depth 1 :inherit ignore
+                                :files (:defaults "elpaca-test.el" (:exclude "extensions"))
+                                :build (:not elpaca--activate-package)))
+  (let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
+         (build (expand-file-name "elpaca/" elpaca-builds-directory))
+         (order (cdr elpaca-order))
+         (default-directory repo))
+    (add-to-list 'load-path (if (file-exists-p build) build repo))
+    (unless (file-exists-p repo)
+      (make-directory repo t)
+      (when (<= emacs-major-version 28) (require 'subr-x))
+      (condition-case-unless-debug err
+          (if-let* ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
+                    ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
+                                                    ,@(when-let* ((depth (plist-get order :depth)))
+                                                        (list (format "--depth=%d" depth) "--no-single-branch"))
+                                                    ,(plist-get order :repo) ,repo))))
+                    ((zerop (call-process "git" nil buffer t "checkout"
+                                          (or (plist-get order :ref) "--"))))
+                    (emacs (concat invocation-directory invocation-name))
+                    ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
+                                          "--eval" "(byte-recompile-directory \".\" 0 'force)")))
+                    ((require 'elpaca))
+                    ((elpaca-generate-autoloads "elpaca" repo)))
+              (progn (message "%s" (buffer-string)) (kill-buffer buffer))
+            (error "%s" (with-current-buffer buffer (buffer-string))))
+        ((error) (warn "%s" err) (delete-directory repo 'recursive))))
+    (unless (require 'elpaca-autoloads nil t)
+      (require 'elpaca)
+      (elpaca-generate-autoloads "elpaca" repo)
+      (let ((load-source-file-function nil)) (load "./elpaca-autoloads"))))
+  (add-hook 'after-init-hook #'elpaca-process-queues)
+  (elpaca `(,@elpaca-order))
+  (setq warning-suppress-log-types '((elpaca)))
+
+  (elpaca elpaca-use-package
+    (elpaca-use-package-mode))
+
+  (setq use-package-always-ensure t)
+#+end_src
+
+** The =init.el= section for fixing PATH on OSX (~exec-path-from-shell~)
+
+The ~PATH~ variable does not get set properly on Mac OSX and Windows machines, and due to this Emacs often does not find the right executables when calling external programs. ~exec-path-from-shell~ fixes this.
+
+#+begin_src emacs-lisp :tangle "init.el"
+  (use-package exec-path-from-shell
+    :if (memq (window-system) '(mac ns))
+    :ensure t
+    :demand t
+    :config
+    (exec-path-from-shell-initialize))
+#+end_src
+
+** The =init.el= section to add modules folder to load-path
+
+#+begin_src emacs-lisp :tangle "init.el"
+  (add-to-list 'load-path (expand-file-name "pratik-modules/" user-emacs-directory))
+#+end_src
+
+** The =init.el= section to load individual modules
+#+begin_src emacs-lisp :tangle "init.el"
+  (require 'pratik-theme)
+  (require 'pratik-essentials)
+  (require 'pratik-completion)
+#+end_src
+
+** The =init.el= section to turn off debug on error
+
+~debug-on-error~ was turned on in the =early-init.el= file. Since all the modules are loaded at this point without any errors, that flag can now be turned off.
+
+#+begin_src emacs-lisp :tangle "init.el"
+  (setq debug-on-error nil)
+#+end_src
+
+** Finally, the =init.el= section for local variables
+#+begin_src emacs-lisp :tangle "init.el"
+  ;; Local Variables:
+  ;; no-byte-compile: t
+  ;; no-native-compile: t
+  ;; no-update-autoloads: t
+  ;; End:
+#+end_src
+
+
+* The =pratik-theme.el= module
+
+This module defines everything related to the look and feel of Emacs.
+
+** The =pratik-theme.el= section for themes (~doom-themes~)
+
+~doom-themes~ package provides a bunch of different themes to choose from and are by default compatible with ~solaire-mode~.
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el" :mkdirp yes
+  ;; pratik-theme.el -*- lexical-binding: t; -*-
+
+  (use-package doom-themes
+    :config
+    (doom-themes-org-config))
+#+end_src
+
+** The =pratik-theme.el= section to distinguish real buffers (~solaire~)
+
+Solaire mode sets different faces to buffers to distinguish real buffers from other buffers like sidebars or mini-buffers.
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el"
+  (use-package solaire-mode
+    :after (doom-themes)
+    :config
+    ;; If a theme needs swapping faces, use the following
+    ;; (add-to-list 'solaire-mode-themes-to-face-swap "^doom-")
+    (solaire-global-mode 1))
+#+end_src
+
+** The =pratik-theme.el= section to rotate themes (~circadian~)
+
+Toggle between light and dark themes according to sunrise and sunset times.
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el"
+  (setq calendar-latitude 37.338207)
+  (setq calendar-longitude -121.886330)
+
+  (use-package circadian
+    :after (doom-themes)
+    :config
+    (setq circadian-themes '((:sunrise . doom-tomorrow-day)
+                             (:sunset  . doom-tomorrow-night)))
+    (circadian-setup))
+#+end_src
+
+** The =pratik-theme.el= section for icons (~nerd-icons~)
+
+~nerd-icons~ are primarily required for ~doom-modeline~, however other packages like ~marginalia~, ~corfu~ or ~treemacs~ also use it to show icons in mini-buffers, completions or sidebars etc.
+
+Other packages require their separate ~nerd-icons~ package which are also installed and configured in this section
+
+*** The ~nerd-icons~ section to install icons
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el"
+  (use-package nerd-icons
+    :config
+    (unless (member "Symbols Nerd Font" (font-family-list))
+      (nerd-icons-install-fonts t)))
+#+end_src
+
+*** The ~nerd-icons~ section for mini-buffer completion icons (~marginalia~) (~vertico~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el"
+  (use-package nerd-icons-completion
+    :after (marginalia nerd-icons)
+    :config
+    (nerd-icons-completion-mode)
+    :hook
+    (marginalia-mode . nerd-icons-completion-marginalia-setup))
+#+end_src
+
+*** The ~nerd-icons~ section for in-buffer completion icons (~corfu~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el"
+  (use-package nerd-icons-corfu
+    :after (corfu nerd-icons))
+#+end_src
+
+*** The ~nerd-icons~ section for sidebar icons (~treemacs~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el"
+  (use-package treemacs-nerd-icons
+    :after (treemacs nerd-icons)
+    :config
+    (treemacs-load-theme "nerd-icons"))
+#+end_src
+
+** The =pratik-theme.el= section for mode-line (~doom-modeline~)
+
+~doom-modeline~ simply works out-of-the-box with minimal configuration.
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el"
+  (use-package doom-modeline
+    :after (doom-themes nerd-icons)
+    :config
+    (setq doom-modeline-enable-word-count t)
+    (setq doom-modeline-indent-info t)
+    (setq doom-modeline-height 20)
+    (setq doom-modeline-buffer-file-name-style 'filename)
+    ;; visual-fill-colum affects modeline too. This pushes the right edge of mode-line to right-fringe.
+    (setq mode-line-right-align-edge 'right-fringe)
+    (setq doom-modeline-env-enable-debug nil)
+    (doom-modeline-mode 1))
+#+end_src
+
+** The =pratik-theme.el= settings for cursor
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el"
+  (blink-cursor-mode -1)
+  (global-hl-line-mode -1)
+#+end_src
+
+** The =pratik-theme.el= section for padding (~spacious-padding~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el"
+  ;; <https://protesilaos.com/codelog/2023-06-03-emacs-spacious-padding/>.
+  (use-package spacious-padding
+    :if (display-graphic-p)
+    :hook (elpaca-after-init . spacious-padding-mode)
+    :init
+    ;; These are the defaults, but kept here for visibility.
+    (setq spacious-padding-widths
+          '(
+            :internal-border-width 20
+            :header-line-width 4
+            :tab-width 4
+            :right-divider-width 20
+            :scroll-bar-width 8
+            :left-fringe-width 10
+            :right-fringe-width 10))
+
+    ;; Read the doc string of `spacious-padding-subtle-mode-line' as
+    ;; it is very flexible.
+    (setq spacious-padding-subtle-mode-line t))
+#+end_src
+
+** The =pratik-theme.el= section for font styles (~fontaine~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el"
+  ;; Read the manual: <https://protesilaos.com/emacs/fontaine>
+  (use-package fontaine
+    :ensure t
+    :if (display-graphic-p)
+    :config
+    ;; This is defined in Emacs C code: it belongs to font settings.
+    (setq x-underline-at-descent-line nil)
+
+    ;; And this is for Emacs 28.
+    (setq-default text-scale-remap-header-line t)
+
+    ;; This is the default value.  Just including it here for
+    ;; completeness.
+    (setq fontaine-latest-state-file (locate-user-emacs-file "fontaine-latest-state.eld"))
+
+    (setq fontaine-presets
+          '((small
+             :default-height 130)
+            (regular
+             :default-height 150)
+            (medium
+             :default-weight semilight
+             :default-height 170
+             :bold-weight extrabold)
+            (large
+             :inherit medium
+             :default-height 190)
+            (presentation
+             :inherit medium
+             :default-height 250)
+            (jumbo
+             :inherit medium
+             :default-height 330)
+            (t
+             ;; See the fontaine manual for the technicalities:
+             ;; <https://protesilaos.com/emacs/fontaine>.
+             :default-family "JetBrains Mono NL"
+             :default-weight normal
+             :variable-pitch-family "JetBrains Mono NL"
+             :variable-pitch-height 1.05)))
+
+    (fontaine-set-preset (or (fontaine-restore-latest-preset) 'regular))
+    (fontaine-mode 1))
+#+end_src
+
+** The =pratik-theme.el= section for soft-wrapping text (~visual-fill-column~)
+
+[[https://codeberg.org/joostkremers/visual-fill-column][visual-fill-column]] soft wraps text after certain (here, 80) characters. Works in conjunction with ~visual-line-mode~.
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el"
+  (use-package visual-fill-column
+    :init
+    (setq-default fill-column 80)
+    :hook
+    (org-mode . (lambda () (setq visual-fill-column-center-text t)))
+    (elpaca-after-init . global-visual-fill-column-mode)
+    (visual-fill-column-mode . visual-line-mode)
+    (visual-fill-column-mode . visual-wrap-prefix-mode)
+    :config
+    (setq visual-fill-column-enable-sensible-window-split t))
+#+end_src
+
+** Finally, provide the =pratik-theme.el= module
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el"
+  (provide 'pratik-theme)
+#+end_src
+
+
+* The =pratik-essentials.el= module
+
+Section for setting sensible defaults and mode agnostic settings.
+
+** The =pratik-essentials.el= section for sensible defaults
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-essentials.el" :mkdirp t
+  ;; pratik-essentials.el -*- lexical-binding: t; -*-
+
+  (use-package emacs
+    :ensure nil
+    :config
+    (setq help-window-select t)
+    (setq scroll-error-top-bottom t)
+    (setq eval-expression-print-length nil)
+    (setq next-error-recenter '(4))
+    (setq find-library-include-other-files nil)
+    (setq-default truncate-partial-width-windows nil)
+    (setq echo-keystrokes-help t)
+    (setq default-directory "~/")
+    (setq vc-follow-symlinks t)
+    (setq sentence-end-double-space nil)
+    (setq confirm-kill-emacs 'y-or-n-p)
+    (fset 'yes-or-no-p 'y-or-n-p))
+#+end_src
+
+** The =pratik-essentials.el= settings for tab behavior
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-essentials.el"
+  (use-package emacs
+    :ensure nil
+    :config
+    (setq tab-always-indent 'complete)
+    (setq tab-width 4)
+    (setq-default indent-tabs-mode nil))
+#+end_src
+
+** The =pratik-essentials.el= settings for code editing
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-essentials.el"
+  (use-package emacs
+    :ensure nil
+    :config
+    (setq font-lock-maximum-decoration t)
+    (setq scroll-preserve-screen-position t)
+    (setq require-final-newline t)
+    (electric-pair-mode 1)
+    (transient-mark-mode 1)
+    (delete-selection-mode 1)
+    :hook
+    (before-save . delete-trailing-whitespace)
+    (after-save . executable-make-buffer-file-executable-if-script-p)
+    (prog-mode . display-line-numbers-mode)
+    (prog-mode . column-number-mode)
+    (prog-mode . subword-mode))
+#+end_src
+
+** The =pratik-essentials.el= settings for killing and yanking
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-essentials.el"
+  (use-package emacs
+    :ensure nil
+    :config
+    (setq-default select-enable-clipboard t
+  		mouse-yank-at-point t
+  		kill-whole-line t)
+    (setq kill-do-not-save-duplicates t))
+#+end_src
+
+** The =pratik-essentials.el= settings for MacOS
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-essentials.el"
+  (when (eq system-type 'darwin)
+    (setq mac-option-modifier 'super)
+    (setq mac-command-modifier 'meta)
+    (setq vc-git-program (executable-find "git"))
+    (setq epg-gpg-program (executable-find "gpg")))
+#+end_src
+
+** The =pratik-essentials.el= section for custom key bindings
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-essentials.el"
+  (use-package emacs
+    :ensure nil
+    :bind
+    ("M-`" . other-frame)
+    ("M-o" . other-window)
+
+    ("C-x k" . kill-current-buffer)
+    ("M-[" . previous-buffer)
+    ("M-]" . next-buffer)
+    ("M-<up>" . beginning-of-buffer)
+    ("M-<down>" . end-of-buffer)
+
+    ("M-<left>" . move-beginning-of-line)
+    ("M-<right>" . move-end-of-line)
+    ("s-<left>" . left-word)
+    ("s-<right>" . right-word)
+
+    ("M-z" . undo)
+    ("M-Z" . undo-redo)
+
+    ("M-d" . mark-word)
+
+    ("C-+" . text-scale-increase)
+    ("C-_" . text-scale-decrease))
+#+end_src
+
+** The =pratik-essentials.el= section for better help (~helpful~)
+
+[[https://github.com/Wilfred/helpful][helpful]] is a package that improves the default Emacs help buffer.
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-essentials.el"
+  (use-package helpful
+    :bind
+    ("C-h f" . helpful-callable)
+    ("C-h v" . helpful-variable)
+    ("C-h k" . helpful-key)
+    ("C-h x" . helpful-command)
+    ("C-c C-d" . helpful-at-point)
+    ("C-c F" . helpful-function))
+#+end_src
+
+** TODO The =pratik-essentials.el= section for treesitter
+** The =pratik-essentials.el= section for tracking recently visited files (~recentf~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-essentials.el"
+  (use-package recentf
+  :ensure nil
+  :hook (elpaca-after-init . recentf-mode)
+  :config
+  (setq recentf-max-saved-items 1000)
+  (setq recentf-save-file-modes nil)
+  (setq recentf-keep nil)
+  (setq recentf-auto-cleanup 'never)
+  (setq recentf-initialize-file-name-history t)
+  (setq recentf-filename-handlers nil)
+  (setq recentf-show-file-shortcuts-flag nil)
+  :bind
+  ("C-x C-r" . recentf))
+#+end_src
+
+** The =pratik-essentials.el= section for tracking point in visited files (~save-place~)
+
+** Finally, provide the =pratik-essentials.el= module
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-essentials.el"
+  (provide 'pratik-essentials)
+#+end_src
+
+
+* The =pratik-completion.el= module
+
+** The =pratik-completion.el= section for keystroke completion (~which-key~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-completion.el" :mkdirp t
+  ;; pratik-completion.el -*- lexical-binding: t; -*-
+  (use-package which-key
+    :ensure nil
+    :demand t
+    :config
+    (setq which-key-add-column-padding 1)
+    (setq which-key-sort-uppercase-first nil)
+    (setq which-key-show-early-on-C-h t)
+    (setq which-key-idle-delay 0.5)
+    (setq which-key-idle-secondary-delay 0.05)
+    (which-key-mode 1))
+#+end_src
+
+** The =pratik-completion.el= settings to ignore letter casing
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-completion.el"
+  (setq completion-ignore-case t)
+  (setq read-file-name-completion-ignore-case t)
+  (setq read-buffer-completion-ignore-case t)
+  (setq-default case-fold-search t)   ; For general regexp
+#+end_src
+
+** The =pratik-completion.el= settings for completion styles
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-completion.el"
+  ;; General minibuffer settings
+  (use-package minibuffer
+    :ensure nil
+    :config
+    ;; see `completion-category-overrides'
+    (setq completion-styles '(basic substring initials flex partial-completion orderless))
+    ;; File completion style
+    (setq completion-category-overrides
+          '((file (styles . (basic partial-completion orderless)))
+            (dictionary (styles . (basic))))))
+#+end_src
+
+** The =pratik-completion.el= section for orderless completion style (~orderless~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-completion.el"
+  (use-package orderless
+    :after minibuffer
+    :config
+    (setq orderless-matching-styles '(orderless-prefixes orderless-regexp))
+    ;; SPC should never complete: use it for `orderless' groups.
+    ;; The `?' is a regexp construct.
+    :bind ( :map minibuffer-local-completion-map
+            ("SPC" . nil)
+            ("?" . nil)))
+#+end_src
+
+** The =pratik-completion.el= settings for recursive minibuffers
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-completion.el"
+  (use-package mb-depth
+  :ensure nil
+  :hook (elpaca-after-init . minibuffer-depth-indicate-mode)
+  :config
+  (setq read-minibuffer-restore-windows nil) ; Emacs 28
+  (setq enable-recursive-minibuffers t))
+#+end_src
+
+** The =pratik-completion.el= settings for default values
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-completion.el"
+  (use-package minibuf-eldef
+    :ensure nil
+    :hook (elpaca-after-init . minibuffer-electric-default-mode)
+    :config
+    (setq minibuffer-default-prompt-format " [%s]"))
+#+end_src
+
+** The =pratik-completion.el= section for generic minibuffer UI settings
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-completion.el"
+  (use-package minibuffer
+    :ensure nil
+    :demand t
+    :config
+    (setq completions-format 'one-column)
+    (setq completion-show-help nil)
+    (setq completion-auto-help 'always)
+    (setq completion-auto-select nil)
+    (setq completions-detailed t)
+    (setq completion-show-inline-help nil)
+    (setq completions-max-height 12)
+    (setq completions-header-format (propertize "%s candidates:\n" 'face 'bold-italic))
+    (setq completions-highlight-face 'completions-highlight)
+    (setq minibuffer-completion-auto-choose t)
+    (setq minibuffer-visible-completions t) ; Emacs 30
+    (setq completions-sort 'historical)
+    ;; Hide commands in M-x which do not work in the current mode.
+    (setq read-extended-command-predicate #'command-completion-default-include-p))
+#+end_src
+
+** The =pratik-completion.el= section for saving minibuffer history (~savehist~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-completion.el"
+  (use-package savehist
+  :ensure nil
+  :hook (elpaca-after-init . savehist-mode)
+  :config
+  (setq savehist-file (locate-user-emacs-file "savehist"))
+  (setq history-length 100)
+  (setq history-delete-duplicates t)
+  (setq savehist-save-minibuffer-history t)
+  (add-to-list 'savehist-additional-variables 'kill-ring))
+#+end_src
+
+** The =pratik-completion.el= settings for dynamic text expansion (~dabbrev~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-completion.el"
+  (use-package dabbrev
+    :ensure nil
+    :commands (dabbrev-expand dabbrev-completion)
+    :config
+    (setq dabbrev-abbrev-char-regexp "\\sw\\|\\s_")
+    (setq dabbrev-abbrev-skip-leading-regexp "[$*/=~']")
+    (setq dabbrev-backward-only nil)
+    (setq dabbrev-case-distinction 'case-replace)
+    (setq dabbrev-case-fold-search nil)
+    (setq dabbrev-case-replace 'case-replace)
+    (setq dabbrev-check-other-buffers t)
+    (setq dabbrev-eliminate-newlines t)
+    (setq dabbrev-upcase-means-case-search t)
+    (setq dabbrev-ignored-buffer-modes
+          '(archive-mode image-mode docview-mode pdf-view-mode)))
+#+end_src
+
+** The =pratik-completion.el= settings for dynamic text expansion (~hippie~)
+
+Hippie is a built-in expansion mechanism that competes with ~dabbrev~. Hippie uses ~dabbrev~ as one of the expansion sources, so all the ~dabbrev~ settings above are still important.
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-completion.el"
+  (use-package hippie-ext
+  :ensure nil
+  :bind
+  ;; Replace the default dabbrev
+  ("M-/" . hippie-expand))
+#+end_src
+
+** The =pratik-completion.el= section for vertical minibuffer layout (~vertico~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-completion.el"
+  (use-package vertico
+    :hook (elpaca-after-init . vertico-mode)
+    :config
+    (setq vertico-scroll-margin 0)
+    (setq vertico-count 10)
+    (setq vertico-resize t)
+    (setq vertico-cycle t))
+#+end_src
+
+** The =pratik-completion.el= section for completion annotations (~marginalia~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-completion.el"
+  (use-package marginalia
+  :ensure t
+  :hook (elpaca-after-init . marginalia-mode)
+  :config
+  (setq marginalia-max-relative-age 0)) ; absolute time
+#+end_src
+
+** The =pratik-completion.el= section for in-buffer completion (~corfu~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-completion.el"
+  (use-package corfu
+    :hook
+    (elpaca-after-init . corfu-popupinfo-mode)
+    (elpaca-after-init . corfu-history-mode)
+    (elpaca-after-init . corfu-echo-mode)
+    (elpaca-after-init . global-corfu-mode)
+    :config
+    (setq corfu-cycle t)
+    (setq corfu-auto t)                 ;; Enable auto completion
+    (setq corfu-auto-delay 0.0)         ;; Immediately corfu menu
+    (setq corfu-auto-prefix 2)          ;; Number of chars before corfu shows up
+    (setq corfu-separator ?\s)          ;; Orderless field separator
+    (setq corfu-on-exact-match nil)     ;; Configure handling of exact matches
+    (setq corfu-scroll-margin 5)        ;; Use scroll margin
+    (setq corfu-min-width 45)           ;; Minimum width of completion buffer
+    (setq corfu-quit-no-match t)        ;; Quit if no match is found
+    (setq corfu-quit-at-boundary t)     ;; Quit at word boundaries
+    (setq corfu-preselect 'valid)
+
+    (with-eval-after-load 'savehist
+      (corfu-history-mode 1)
+      (add-to-list 'savehist-additional-variables 'corfu-history))
+
+    (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
+    ;; :bind
+    ;; (:map corfu-map
+    ;;       ("TAB" . corfu-next)
+    ;;       ([tab] . corfu-next)
+    ;;       ("S-TAB" . corfu-previous)
+    ;;       ([backtab] . corfu-previous)))
+#+end_src
+
+** The =pratik-completion.el= section for completion at point functions (~cape~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-completion.el"
+  (use-package cape
+    :demand t
+    :hook
+    (completion-at-point-functions . cape-dabbrev)
+    (completion-at-point-functions . cape-elisp-block)
+    (completion-at-point-functions . cape-abbrev)
+    (completion-at-point-functions . cape-file))
+#+end_src
+
+
+** The =pratik-completion.el= section for filtering and previewing candidates (~consult~)
+
+** Finally, provide the =pratik-completion.el= module
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-completion.el"
+  (provide 'pratik-completion)
+#+end_src
