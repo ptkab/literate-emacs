@@ -3,4 +3,5 @@
 
 # Except
 !.gitignore
+!README.org
 !pratik-emacs.org
