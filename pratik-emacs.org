@@ -216,6 +216,7 @@ The ~PATH~ variable does not get set properly on Mac OSX and Windows machines, a
   (require 'pratik-theme)
   (require 'pratik-essentials)
   (require 'pratik-completion)
+  (require 'pratik-shell)
 #+end_src
 
 ** The =init.el= section to turn off debug on error
@@ -548,8 +549,19 @@ Section for setting sensible defaults and mode agnostic settings.
 
     ("M-d" . mark-word)
 
+    ("C-x f" . project-find-file)
+
     ("C-+" . text-scale-increase)
     ("C-_" . text-scale-decrease))
+#+end_src
+
+** The =pratik-essentials.el= setting to ignore certain buffers while switching
+
+Ignore any buffers that start with '*' like "*scratch*" or "*Messages*" when switching buffers.
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-essentials.el"
+  (set-frame-parameter (selected-frame) 'buffer-predicate
+        	             (lambda (buf) (not (string-match-p "^*" (buffer-name buf)))))
 #+end_src
 
 ** The =pratik-essentials.el= section for better help (~helpful~)
@@ -783,19 +795,13 @@ Hippie is a built-in expansion mechanism that competes with ~dabbrev~. Hippie us
     (setq corfu-min-width 45)           ;; Minimum width of completion buffer
     (setq corfu-quit-no-match t)        ;; Quit if no match is found
     (setq corfu-quit-at-boundary t)     ;; Quit at word boundaries
-    (setq corfu-preselect 'valid)
+    (setq corfu-preselect 'prompt)
 
     (with-eval-after-load 'savehist
       (corfu-history-mode 1)
       (add-to-list 'savehist-additional-variables 'corfu-history))
 
     (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
-    ;; :bind
-    ;; (:map corfu-map
-    ;;       ("TAB" . corfu-next)
-    ;;       ([tab] . corfu-next)
-    ;;       ("S-TAB" . corfu-previous)
-    ;;       ([backtab] . corfu-previous)))
 #+end_src
 
 ** The =pratik-completion.el= section for completion at point functions (~cape~)
@@ -810,11 +816,61 @@ Hippie is a built-in expansion mechanism that competes with ~dabbrev~. Hippie us
     (completion-at-point-functions . cape-file))
 #+end_src
 
-
 ** The =pratik-completion.el= section for filtering and previewing candidates (~consult~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-completion.el"
+  (use-package consult
+    :hook (completion-list-mode . consult-preview-at-point-mode)
+    :bind
+    (:map global-map
+          ("s-x" . consult-mode-command)
+          ("C-x p b" . consult-project-buffer)
+          ("C-x b" . consult-buffer)
+
+          ("M-s e" . consult-isearch-history)
+          ("M-s g" . consult-grep)
+          ("M-s G" . consult-git-grep)
+          ("M-s i" . consult-imenu)
+          ("M-s k" . consult-keep-lines)
+          ("M-s l" . consult-line)
+          ("M-s L" . consult-line-multi)
+          ("M-s r" . consult-ripgrep)
+
+          ("M-y" . consult-yank-pop)
+          ;; Overriding the default `M-g' key bindings
+          ("M-g e" . consult-compile-error)
+          ("M-g f" . consult-flymake)
+          ("M-g g" . consult-goto-line)
+          ("M-g h" . consult-history)
+          ("M-g o" . consult-outline)
+          ("C-c s" . consult-ripgrep)))
+#+end_src
 
 ** Finally, provide the =pratik-completion.el= module
 
 #+begin_src emacs-lisp :tangle "pratik-modules/pratik-completion.el"
   (provide 'pratik-completion)
+#+end_src
+
+* The =pratik-shell.el= module
+
+** The =pratik-shell.el= section for using terminal inside Emacs (~vterm~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-shell.el" :mkdirp t
+  ;; pratik-shell.el -*- lexical-binding: t; -*-
+
+  (use-package vterm
+    :bind
+    ("C-x c" . vterm)
+    ("C-x C" . vterm-other-window)
+    :config
+    (setq vterm-buffer-name "Terminal")
+    (setq vterm-max-scrollback 100000)
+    (setq vterm-shell (executable-find "zsh")))
+#+end_src
+
+** Finally provide the =pratik-shell.el= module
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-shell.el"
+  (provide 'pratik-shell)
 #+end_src

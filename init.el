@@ -83,6 +83,7 @@
 (require 'pratik-theme)
 (require 'pratik-essentials)
 (require 'pratik-completion)
+(require 'pratik-shell)
 
 (setq debug-on-error nil)
 
