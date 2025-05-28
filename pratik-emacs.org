@@ -253,6 +253,35 @@ This module defines everything related to the look and feel of Emacs.
     (doom-themes-org-config))
 #+end_src
 
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el"
+  ;;; The Ef (εὖ) themes
+
+;; The themes are customisable.  Read the manual:
+;; <https://protesilaos.com/emacs/ef-themes>.
+(use-package ef-themes
+  :ensure t
+  :demand t
+  :bind
+  (("<f5>" . ef-themes-rotate)
+   ("C-<f5>" . ef-themes-select))
+  :config
+  (setq ef-themes-variable-pitch-ui nil)
+  (setq ef-themes-mixed-fonts t)
+  (setq ef-themes-headings      ; read the manual's entry of the doc string
+        '((0 . (variable-pitch light 1.6))
+          (1 . (variable-pitch light 1.5))
+          (2 . (variable-pitch regular 1.4))
+          (3 . (variable-pitch regular 1.3))
+          (4 . (variable-pitch regular 1.2))
+          (5 . (variable-pitch 1.15))  ; absence of weight means `bold'
+          (6 . (variable-pitch 1.1))
+          (agenda-date . (semilight 1.3))
+          (agenda-structure . (light 1.6))
+          (t . (1.1))))
+  (setq ef-themes-disable-other-themes t)
+  (mapc #'disable-theme custom-enabled-themes))
+#+end_src
+
 ** The =pratik-theme.el= section to distinguish real buffers (~solaire~)
 
 Solaire mode sets different faces to buffers to distinguish real buffers from other buffers like sidebars or mini-buffers.
@@ -277,8 +306,8 @@ Toggle between light and dark themes according to sunrise and sunset times.
   (use-package circadian
     :after (doom-themes)
     :config
-    (setq circadian-themes '((:sunrise . doom-tomorrow-day)
-                             (:sunset  . doom-tomorrow-night)))
+    (setq circadian-themes '((:sunrise . ef-frost)
+                             (:sunset  . ef-owl)))
     (circadian-setup))
 #+end_src
 
@@ -851,6 +880,7 @@ Hippie is a built-in expansion mechanism that competes with ~dabbrev~. Hippie us
 #+begin_src emacs-lisp :tangle "pratik-modules/pratik-completion.el"
   (provide 'pratik-completion)
 #+end_src
+
 
 * The =pratik-shell.el= module
 
