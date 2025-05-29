@@ -216,6 +216,8 @@ The ~PATH~ variable does not get set properly on Mac OSX and Windows machines, a
   (require 'pratik-theme)
   (require 'pratik-essentials)
   (require 'pratik-completion)
+  (require 'pratik-dev)
+  (require 'pratik-org)
   (require 'pratik-shell)
 #+end_src
 
@@ -879,6 +881,221 @@ Hippie is a built-in expansion mechanism that competes with ~dabbrev~. Hippie us
 
 #+begin_src emacs-lisp :tangle "pratik-modules/pratik-completion.el"
   (provide 'pratik-completion)
+#+end_src
+
+
+* The =pratik-dev.el= module
+
+Section for setting up development tools in Emacs like ~magit~ or ~treemacs~.
+
+** The =pratik-dev.el= section for sidebar (~treemacs~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-dev.el" :mkdirp t
+    ;; pratik-dev.el -*- lexical-binding: t; -*-
+
+  (use-package treemacs
+      :custom
+      (treemacs-width 45)
+      (treemacs-project-follow-mode t)
+      (treemacs-follow-mode t)
+      (treemacs-project-follow-cleanup t)
+      (treemacs-git-mode 'extended)
+      (treemacs-filewatch-mode t)
+      (treemacs-indent-guide-mode t)
+      (treemacs-move-forward-on-expand t)
+      (treemacs-user-mode-line-format 'none)
+      :config
+      (treemacs-hide-gitignored-files-mode t)
+      :hook
+      (emacs-startup . treemacs)
+      :bind
+      ("C-M-0" . treemacs)
+      ("M-0" . treemacs-select-window))
+#+end_src
+
+** The =pratik-dev.el= section for git (~magit~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-dev.el"
+  (use-package transient
+    :config
+    (setq transient-enable-popup-navigation t)
+    (setq transient-show-popup 0.5))
+
+  (use-package magit
+    :after transient
+    :bind ("C-x g" . magit-status)
+    :init
+    (setq magit-define-global-key-bindings nil)
+    :config
+    (setq git-commit-summary-max-length 50)
+    (setq magit-diff-refine-hunk t))
+#+end_src
+
+** The =pratik-dev.el= section to highlight indentations (~highlight-indent-guides~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-dev.el"
+  (use-package highlight-indent-guides
+    :config
+    (setq highlight-indent-guides-method 'character)
+    (setq highlight-indent-guides-responsive 'top)
+    :hook
+    (prog-mode . highlight-indent-guides-mode))
+#+end_src
+
+** The =pratik-dev.el= section for code formatting (~format-all~)
+
+Automatically formats code on save for almost all languages.
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-dev.el"
+  (use-package format-all
+    :hook
+    (prog-mode . format-all-mode)
+    (prog-mode . format-all-ensure-formatter))
+#+end_src
+
+** The =pratik-dev.el= section for spell checking (~flyspell~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-dev.el"
+  (use-package flyspell
+    :ensure nil
+    :hook
+    (text-mode . flyspell-mode)
+    (prog-mode . flyspell-prog-mode)
+    :bind
+    ( :map flyspell-mode-map
+      ("C-;" . nil))
+    :config
+    (setq flyspell-issue-message-flag nil)
+    (setq flyspell-issue-welcome-flag nil)
+    (setq ispell-program-name "aspell")
+    (setq ispell-dictionary "en_US"))
+#+end_src
+
+** The =pratik-dev.el= section for code linting (~flymake~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-dev.el"
+  (use-package flymake
+    :ensure nil
+    :bind
+    ( :map flymake-mode-map
+      ("C-c ! s" . flymake-start)
+      ("C-c ! l" . flymake-show-buffer-diagnostics)  ; Emacs28
+      ("C-c ! L" . flymake-show-project-diagnostics) ; Emacs28
+      ("C-c ! n" . flymake-goto-next-error)
+      ("C-c ! p" . flymake-goto-prev-error))
+    :hook
+    (prog-mode . turn-on-flymake)
+    :config
+    (defun turn-on-flymake () (flymake-mode t))
+    (setq flymake-fringe-indicator-position 'left-fringe)
+    (setq flymake-suppress-zero-counters t)
+    (setq flymake-no-changes-timeout nil)
+    (setq flymake-start-on-flymake-mode t)
+    (setq flymake-start-on-save-buffer t)
+    (setq flymake-proc-compilation-prevents-syntax-check t)
+    (setq flymake-wrap-around nil)
+    (setq flymake-mode-line-format
+          '("" flymake-mode-line-exception flymake-mode-line-counters))
+    (setq flymake-mode-line-counter-format
+          '("" flymake-mode-line-error-counter
+            flymake-mode-line-warning-counter
+            flymake-mode-line-note-counter ""))
+    (setq flymake-show-diagnostics-at-end-of-line nil) ; Emacs 30
+    (remove-hook 'flymake-diagnostic-functions #'flymake-proc-legacy-flymake))
+
+  ;;; Elisp packaging requirements
+  (use-package package-lint-flymake
+    :after flymake
+    :config
+    ;; Can't use `use-package' :hook because the hookname doesn't end in -hook.
+    (add-hook 'flymake-diagnostic-functions #'package-lint-flymake))
+#+end_src
+
+** The =pratik-dev.el= section for multiple edits (~multiple-cursors~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-dev.el"
+  (use-package multiple-cursors
+    :bind
+    ("C->" . mc/mark-next-like-this)
+    ("C-<" . mc/mark-previous-like-this)
+    ("C-c C->" . mc/mark-all-like-this))
+#+end_src
+
+** Finally, provide the =pratik-dev.el= module
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-dev.el"
+  (provide 'pratik-dev)
+#+end_src
+
+
+* The =pratik-org.el= module
+
+** The =pratik-org.el= section for basic Org settings
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-org.el" :mkdirp t
+  ;; pratik-org.el -*- lexical-binding: t; -*-
+
+  (use-package org
+    :ensure nil
+    :config
+    (setq org-ellipsis "...")
+    (setq org-special-ctrl-a/e t)
+    (setq org-special-ctrl-k t)
+    (setq org-M-RET-may-split-line '((headline . nil)
+                                   (item . t)
+                                   (table . nil)
+                                   (default . t)))
+    (setq org-hide-emphasis-markers nil)
+    (setq org-hide-leading-stars t)
+    (setq org-hide-macro-markers nil)
+    (setq org-cycle-separator-lines 2)
+    (setq org-structure-template-alist
+        '(("s" . "src")
+          ("e" . "src emacs-lisp")
+          ("E" . "src emacs-lisp :results value code :lexical t")
+          ("t" . "src emacs-lisp :tangle FILENAME")
+          ("T" . "src emacs-lisp :tangle FILENAME :mkdirp yes")
+          ("x" . "example")
+          ("X" . "export")
+          ("q" . "quote")))
+    (setq org-return-follows-link nil)
+    (setq org-insert-heading-respect-content t)
+    (setq org-fontify-quote-and-verse-blocks t)
+    (setq org-fontify-whole-block-delimiter-line t)
+    (setq org-track-ordered-property-with-tag t)
+    (setq org-auto-align-tags t))
+#+end_src
+
+** The =pratik-org.el= settings for src blocks
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-org.el"
+  (use-package org
+    :ensure nil
+    :config
+    (setq org-confirm-babel-evaluate nil)
+    (setq org-src-window-setup 'current-window)
+    (setq org-src-fontify-natively t)
+    (setq org-src-preserve-indentation nil)
+    (setq org-src-tab-acts-natively t)
+    (setq org-edit-src-content-indentation 2))
+#+end_src
+
+** The =pratik-org.el= section for fancy bullets  (~org-superstar~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-org.el"
+  (use-package org-superstar
+    :after (org)
+    :hook
+    (org-mode . (lambda () (org-superstar-mode 1)))
+    :config
+    (setq org-superstar-remove-leading-stars t)
+    (setq org-superstar-headline-bullets-list '("◉" "●" "○" "◌")))
+#+end_src
+
+** Finally, provide the =pratik-org.el= module
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-org.el"
+  (provide 'pratik-org)
 #+end_src
 
 
