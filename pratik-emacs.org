@@ -1,9 +1,17 @@
 #+title: Pratik's Emacs configuration
 #+author: Pratik Abhyankar
+#+language: en
+#+options: ':t toc:t num:nil author:t
 
 * Introduction
 
-While majority of the configuration here comes from  my old 'illiterate' Emacs configuration, many parts of it, including the structure, is adapted from Vedang Manerikar's Emacs configuration for Unravel Team.
+While much of the configuration here comes from  my old 'illiterate' Emacs configuration, many parts of it, including the structure, is adapted from [[https://vedang.me/][Vedang Manerikar's]] Emacs configuration for [[https://github.com/unravel-team/emacs/][Unravel Team]].
+
+** Prerequisites
++ Fonts: ~JetBrains Mono~
++ Emacs version: *30+*
+
+** Usage
 
 To make a change to this Emacs configuration, edit this file and then type =C-c C-v C-t= (=M-x org-babel-tangle=) to republish all the relevant files.
 
@@ -1045,6 +1053,7 @@ Automatically formats code on save for almost all languages.
                                    (item . t)
                                    (table . nil)
                                    (default . t)))
+    (setq org-indent-mode t)
     (setq org-hide-emphasis-markers nil)
     (setq org-hide-leading-stars t)
     (setq org-hide-macro-markers nil)
