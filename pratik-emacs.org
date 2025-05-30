@@ -27,7 +27,7 @@ This is the first file that Emacs reads when starting up. It should contain code
 ** The =early-init.el= file basic frame settings
 
 #+begin_src emacs-lisp :tangle "early-init.el"
-    ;; early-init.el -*- lexical-binding: t; -*-
+  ;; early-init.el -*- lexical-binding: t; -*-
 
   (setq frame-resize-pixelwise t
         frame-inhibit-implied-resize t
@@ -227,6 +227,7 @@ The ~PATH~ variable does not get set properly on Mac OSX and Windows machines, a
   (require 'pratik-dev)
   (require 'pratik-org)
   (require 'pratik-shell)
+  (require 'pratik-personal)
 #+end_src
 
 ** The =init.el= section to turn off debug on error
@@ -1053,7 +1054,7 @@ Automatically formats code on save for almost all languages.
                                    (item . t)
                                    (table . nil)
                                    (default . t)))
-    (setq org-indent-mode t)
+    (setq org-startup-indented t)
     (setq org-hide-emphasis-markers nil)
     (setq org-hide-leading-stars t)
     (setq org-hide-macro-markers nil)
@@ -1098,7 +1099,7 @@ Automatically formats code on save for almost all languages.
     (org-mode . (lambda () (org-superstar-mode 1)))
     :config
     (setq org-superstar-remove-leading-stars t)
-    (setq org-superstar-headline-bullets-list '("◉" "●" "○" "◌")))
+    (setq org-superstar-headline-bullets-list '("◉" "○" "●" "◌")))
 #+end_src
 
 ** Finally, provide the =pratik-org.el= module
@@ -1129,4 +1130,28 @@ Automatically formats code on save for almost all languages.
 
 #+begin_src emacs-lisp :tangle "pratik-modules/pratik-shell.el"
   (provide 'pratik-shell)
+#+end_src
+
+
+* The =pratik-personal.el= module
+
+This section contains all personal configurations which help me organize different aspects of my life like personal finance, note taking or tracking tasks.
+
+** The =pratik-personal.el= module for personal finance (~ledger~)
+
+[[https://ledger-cli.org/][Ledger CLI]] is a fantastic plain text personal finance management tool with excellent Emacs support.
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-personal.el" :mkdirp yes
+  ;; pratik-personal.el -*- lexical-binding: t; -*-
+
+  (use-package ledger-mode
+      :mode ("\\.ledger\\'")
+      :config
+      (setq ledger-clear-whole-transactions t))
+#+end_src
+
+** Finally, provide the =pratik-personal.el= module
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-personal.el"
+  (provide 'pratik-personal)
 #+end_src
