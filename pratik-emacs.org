@@ -252,45 +252,18 @@ The ~PATH~ variable does not get set properly on Mac OSX and Windows machines, a
 
 This module defines everything related to the look and feel of Emacs.
 
-** The =pratik-theme.el= section for themes (~doom-themes~)
+** The =pratik-theme.el= section for themes (~solarized-theme~)
 
-~doom-themes~ package provides a bunch of different themes to choose from and are by default compatible with ~solaire-mode~.
+Easy on eyes, no color pasta, good contrast and supports a plethora of modes. Go to theme.
 
-#+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el" :mkdirp yes
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el" :mkdirp t
   ;; pratik-theme.el -*- lexical-binding: t; -*-
 
-  (use-package doom-themes
-    :config
-    (doom-themes-org-config))
-#+end_src
-
-#+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el"
-  ;;; The Ef (εὖ) themes
-
-;; The themes are customisable.  Read the manual:
-;; <https://protesilaos.com/emacs/ef-themes>.
-(use-package ef-themes
-  :ensure t
-  :demand t
-  :bind
-  (("<f5>" . ef-themes-rotate)
-   ("C-<f5>" . ef-themes-select))
-  :config
-  (setq ef-themes-variable-pitch-ui nil)
-  (setq ef-themes-mixed-fonts t)
-  (setq ef-themes-headings      ; read the manual's entry of the doc string
-        '((0 . (variable-pitch light 1.6))
-          (1 . (variable-pitch light 1.5))
-          (2 . (variable-pitch regular 1.4))
-          (3 . (variable-pitch regular 1.3))
-          (4 . (variable-pitch regular 1.2))
-          (5 . (variable-pitch 1.15))  ; absence of weight means `bold'
-          (6 . (variable-pitch 1.1))
-          (agenda-date . (semilight 1.3))
-          (agenda-structure . (light 1.6))
-          (t . (1.1))))
-  (setq ef-themes-disable-other-themes t)
-  (mapc #'disable-theme custom-enabled-themes))
+  (use-package solarized-theme
+    :init
+    ;; These need to be set before the theme is activated.
+    (setq solarized-highlight-numbers t)
+    (setq solarized-scale-markdown-headlines t))
 #+end_src
 
 ** The =pratik-theme.el= section to distinguish real buffers (~solaire~)
@@ -299,7 +272,7 @@ Solaire mode sets different faces to buffers to distinguish real buffers from ot
 
 #+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el"
   (use-package solaire-mode
-    :after (doom-themes)
+    :after (solarized-theme)
     :config
     ;; If a theme needs swapping faces, use the following
     ;; (add-to-list 'solaire-mode-themes-to-face-swap "^doom-")
@@ -317,8 +290,8 @@ Toggle between light and dark themes according to sunrise and sunset times.
   (use-package circadian
     :after (doom-themes)
     :config
-    (setq circadian-themes '((:sunrise . ef-frost)
-                             (:sunset  . ef-owl)))
+    (setq circadian-themes '((:sunrise . solarized-light)
+                             (:sunset  . solarized-dark)))
     (circadian-setup))
 #+end_src
 
@@ -386,7 +359,7 @@ Other packages require their separate ~nerd-icons~ package which are also instal
 
 #+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el"
   (blink-cursor-mode -1)
-  (global-hl-line-mode -1)
+  (global-hl-line-mode 1)
 #+end_src
 
 ** The =pratik-theme.el= section for padding (~spacious-padding~)
@@ -619,7 +592,18 @@ Ignore any buffers that start with '*' like "*scratch*" or "*Messages*" when swi
     ("C-c F" . helpful-function))
 #+end_src
 
-** TODO The =pratik-essentials.el= section for treesitter
+** The =pratik-essentials.el= section about auto management of treesit modules (~treesit-auto~)
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-essentials.el"
+  ;;; Install and use tree-sitter major modes where possible
+  (when (treesit-available-p)
+    (use-package treesit-auto
+      :config
+      (setq treesit-auto-install 'prompt)
+      (treesit-auto-add-to-auto-mode-alist)
+      (global-treesit-auto-mode)))
+#+end_src
+
 ** The =pratik-essentials.el= section for tracking recently visited files (~recentf~)
 
 #+begin_src emacs-lisp :tangle "pratik-modules/pratik-essentials.el"
@@ -1100,6 +1084,14 @@ Automatically formats code on save for almost all languages.
     :config
     (setq org-superstar-remove-leading-stars t)
     (setq org-superstar-headline-bullets-list '("◉" "○" "●" "◌")))
+#+end_src
+
+** The =pratik-org.el= section for org export
+
+Get the latest version of ~htmlize~ for font locking in exported HTML docs.
+
+#+begin_src emacs-lisp :tangle "pratik-modules/pratik-org.el"
+  (use-package htmlize)
 #+end_src
 
 ** Finally, provide the =pratik-org.el= module
