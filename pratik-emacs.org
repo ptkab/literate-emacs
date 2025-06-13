@@ -288,7 +288,7 @@ Toggle between light and dark themes according to sunrise and sunset times.
   (setq calendar-longitude -121.886330)
 
   (use-package circadian
-    :after (doom-themes)
+    :after (solarized-theme)
     :config
     (setq circadian-themes '((:sunrise . solarized-light)
                              (:sunset  . solarized-dark)))
@@ -343,7 +343,7 @@ Other packages require their separate ~nerd-icons~ package which are also instal
 
 #+begin_src emacs-lisp :tangle "pratik-modules/pratik-theme.el"
   (use-package doom-modeline
-    :after (doom-themes nerd-icons)
+    :after (nerd-icons)
     :config
     (setq doom-modeline-enable-word-count t)
     (setq doom-modeline-indent-info t)
@@ -373,10 +373,10 @@ Other packages require their separate ~nerd-icons~ package which are also instal
     ;; These are the defaults, but kept here for visibility.
     (setq spacious-padding-widths
           '(
-            :internal-border-width 20
+            :internal-border-width 10
             :header-line-width 4
             :tab-width 4
-            :right-divider-width 20
+            :right-divider-width 10
             :scroll-bar-width 8
             :left-fringe-width 10
             :right-fringe-width 10))
@@ -491,7 +491,7 @@ Section for setting sensible defaults and mode agnostic settings.
     :ensure nil
     :config
     (setq tab-always-indent 'complete)
-    (setq tab-width 4)
+    (setq-default tab-width 4)
     (setq-default indent-tabs-mode nil))
 #+end_src
 
@@ -1065,6 +1065,8 @@ Automatically formats code on save for almost all languages.
 #+begin_src emacs-lisp :tangle "pratik-modules/pratik-org.el"
   (use-package org
     :ensure nil
+    :bind
+    ("C-c i" . org-indent-block)
     :config
     (setq org-confirm-babel-evaluate nil)
     (setq org-src-window-setup 'current-window)
